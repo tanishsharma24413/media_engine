@@ -2,6 +2,7 @@
 
 #include "media/pipeline.hpp"
 #include "media/types.hpp"
+#include "media/clock.hpp"
 
 #include <atomic>
 #include <condition_variable>
@@ -63,6 +64,8 @@ private:
   };
 
   Channel ch_{};
+  PlaybackClock clock_{};
+
   std::thread state_worker_{};
   std::thread input_worker_{};
   std::thread decoder_worker_{};

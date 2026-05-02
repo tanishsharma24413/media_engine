@@ -1,4 +1,5 @@
 #include "media/engine.hpp"
+#include "media/clock.hpp"
 
 #include <string>
 #include <utility>
@@ -169,6 +170,7 @@ void Engine::start_playback_threads() {
   stop_playback_threads();
   packet_queue_.reset();
   frame_queue_.reset();
+  clock_.reset();
   
   if (pipeline_->source()) {
     input_worker_ = std::thread([this] { input_thread_main(); });
@@ -249,9 +251,11 @@ void Engine::vout_thread_main() {
 
   while (state_.load() != PlayerState::Stopped && state_.load() != PlayerState::Idle) {
     if (state_.load() == PlayerState::Paused) {
+      clock_.set_paused(true);
       std::this_thread::sleep_for(std::chrono::milliseconds(50));
       continue;
     }
+    clock_.set_paused(false);
 
     auto opt_frame = frame_queue_.pop();
     if (!opt_frame) break;
@@ -259,7 +263,20 @@ void Engine::vout_thread_main() {
     MediaFrame frame = std::move(*opt_frame);
     
     // VLC logic: check PTS against master clock. 
-    // Since we don't have an audio clock yet, we'll just present immediately.
+    double pts = frame.pts_seconds;
+    double elapsed = clock_.elapsed().count();
+    
+    if (pts > elapsed) {
+        double diff = pts - elapsed;
+        // Cap sleep to avoid massive hangs on first frame or PTS jumps
+        if (diff > 0.0 && diff < 5.0) {
+            std::this_thread::sleep_for(std::chrono::duration<double>(diff));
+        } else if (diff >= 5.0) {
+            // If jump is huge, reset clock to PTS
+            clock_.reset();
+        }
+    }
+
     vout->render_frame(frame);
 
     if (pipeline_->video_decoder()) {

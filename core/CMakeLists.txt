@@ -3,6 +3,7 @@ add_library(media_core STATIC
   src/engine.cpp
   src/clock.cpp
   src/pipeline.cpp
+  src/libtanish.cpp
 )
 
 target_include_directories(
