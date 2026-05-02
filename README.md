@@ -1,4 +1,4 @@
-# media_engine (desktop prototype)
+# libtanish (desktop prototype)
 
 This is a **Windows-first scaffold** for a proprietary media core:
 

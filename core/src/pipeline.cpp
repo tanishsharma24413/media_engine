@@ -23,6 +23,11 @@ void MediaPipeline::set_packet_source(std::shared_ptr<IPacketSource> source) {
   source_ = std::move(source);
 }
 
+void MediaPipeline::set_video_decoder(std::shared_ptr<IDecoder> decoder) {
+  std::scoped_lock lock(mutex_);
+  video_decoder_ = std::move(decoder);
+}
+
 void MediaPipeline::set_audio_output(std::shared_ptr<IAudioOutput> audio) {
   std::scoped_lock lock(mutex_);
   audio_ = std::move(audio);

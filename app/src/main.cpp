@@ -16,7 +16,7 @@
 
 namespace {
 
-constexpr wchar_t kWindowClassName[] = L"media_engine_shell";
+constexpr wchar_t kWindowClassName[] = L"libtanish_shell";
 
 std::string utf8_from_wide(std::wstring_view wide) {
   if (wide.empty()) {
@@ -132,7 +132,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hinst, _In_opt_ HINSTANCE, _In_ LPWSTR, _In_ 
   HWND hwnd = CreateWindowExW(
       0,
       kWindowClassName,
-      L"media_engine (prototype)",
+      L"libtanish (prototype)",
       WS_OVERLAPPEDWINDOW,
       CW_USEDEFAULT,
       CW_USEDEFAULT,

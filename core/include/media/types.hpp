@@ -27,4 +27,18 @@ struct EngineError {
   std::string message;
 };
 
+struct MediaPacket {
+  void* opaque{nullptr}; // Backend-specific packet (e.g. AVPacket)
+  bool is_video{false};
+  bool is_audio{false};
+  double pts_seconds{0.0};
+};
+
+struct MediaFrame {
+  void* opaque{nullptr}; // Backend-specific frame (e.g. AVFrame)
+  double pts_seconds{0.0};
+  int width{0};
+  int height{0};
+};
+
 } // namespace media

@@ -4,6 +4,8 @@ include(MediaFFmpeg)
 
 add_library(media_ffmpeg STATIC
   src/ffmpeg_backend.cpp
+  src/ffmpeg_demuxer.cpp
+  src/ffmpeg_decoder.cpp
 )
 
 target_include_directories(
