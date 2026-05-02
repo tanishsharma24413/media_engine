@@ -202,7 +202,7 @@ void Engine::input_thread_main() {
       continue;
     }
 
-    // Very simple VLC-like demux loop. Limit queue size to avoid OOM.
+    // Very simple demux loop. Limit queue size to avoid OOM.
     if (packet_queue_.size() > 100) {
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
       continue;
@@ -238,7 +238,7 @@ void Engine::decoder_thread_main() {
     }
     
     // Packet is consumed, we should free its opaque data (if backend didn't take ownership).
-    // VLC handles this inside the decoder or drops it. We'll rely on pipeline->source to free it.
+    // Backend handles this inside the decoder or drops it. We'll rely on pipeline->source to free it.
     if (pipeline_->source()) {
        pipeline_->source()->free_packet(pkt);
     }
@@ -262,7 +262,7 @@ void Engine::vout_thread_main() {
 
     MediaFrame frame = std::move(*opt_frame);
     
-    // VLC logic: check PTS against master clock. 
+    // Sync logic: check PTS against master clock. 
     double pts = frame.pts_seconds;
     double elapsed = clock_.elapsed().count();
     
