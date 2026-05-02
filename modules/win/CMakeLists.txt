@@ -15,6 +15,7 @@ target_link_libraries(
   PRIVATE
     d3d11
     dxgi
+    d3dcompiler
 )
 
 if(MSVC)

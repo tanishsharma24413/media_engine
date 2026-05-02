@@ -18,6 +18,7 @@ public:
 
 private:
   AVCodecContext* codec_ctx_{nullptr};
+  struct SwsContext* sws_ctx_{nullptr};
   double time_base_{0.0};
 };
 

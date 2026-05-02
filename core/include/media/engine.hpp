@@ -8,6 +8,8 @@
 #include <functional>
 #include <mutex>
 #include <thread>
+#include <vector>
+#include "media/queue.hpp"
 
 namespace media {
 
@@ -61,7 +63,20 @@ private:
   };
 
   Channel ch_{};
-  std::thread worker_{};
+  std::thread state_worker_{};
+  std::thread input_worker_{};
+  std::thread decoder_worker_{};
+  std::thread vout_worker_{};
+
+  ThreadQueue<MediaPacket> packet_queue_;
+  ThreadQueue<MediaFrame> frame_queue_;
+
+  void input_thread_main();
+  void decoder_thread_main();
+  void vout_thread_main();
+  
+  void start_playback_threads();
+  void stop_playback_threads();
 };
 
 } // namespace media

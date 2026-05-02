@@ -5,7 +5,7 @@
 
 namespace media {
 
-Engine::Engine() : worker_{[this] { thread_main(); }} {}
+Engine::Engine() : state_worker_{[this] { thread_main(); }} {}
 
 Engine::~Engine() { post_shutdown(); }
 
@@ -68,8 +68,8 @@ void Engine::post_shutdown() {
     ch_.has = true;
   }
   ch_.cv.notify_one();
-  if (worker_.joinable()) {
-    worker_.join();
+  if (state_worker_.joinable()) {
+    state_worker_.join();
   }
 }
 
@@ -94,20 +94,35 @@ void Engine::thread_main() {
     case CommandType::Open: {
       emit_state(PlayerState::Opening);
       pipeline_->attach_uri(std::move(cmd.uri));
+      
+      if (pipeline_->source()) {
+          pipeline_->source()->open(pipeline_->uri());
+          if (pipeline_->video_decoder()) {
+              pipeline_->video_decoder()->open(pipeline_->source()->video_info());
+          }
+      }
+
       emit_state(PlayerState::Paused);
       break;
     }
     case CommandType::Play:
+      if (state_.load() == PlayerState::Stopped || state_.load() == PlayerState::Idle) {
+         // Should not happen if open was called, but safety first
+      } else if (state_.load() != PlayerState::Playing) {
+         start_playback_threads();
+      }
       emit_state(PlayerState::Playing);
       break;
     case CommandType::Pause:
       emit_state(PlayerState::Paused);
       break;
     case CommandType::Stop:
+      stop_playback_threads();
       pipeline_->clear();
       emit_state(PlayerState::Stopped);
       break;
     case CommandType::Shutdown:
+      stop_playback_threads();
       pipeline_->clear();
       emit_state(PlayerState::Idle);
       {
@@ -147,6 +162,109 @@ void Engine::emit_error(std::string message) {
   }
   if (cb) {
     cb(EngineError{std::move(message)});
+  }
+}
+
+void Engine::start_playback_threads() {
+  stop_playback_threads();
+  packet_queue_.reset();
+  frame_queue_.reset();
+  
+  if (pipeline_->source()) {
+    input_worker_ = std::thread([this] { input_thread_main(); });
+  }
+  if (pipeline_->video_decoder()) {
+    decoder_worker_ = std::thread([this] { decoder_thread_main(); });
+  }
+  if (pipeline_->video_output()) {
+    vout_worker_ = std::thread([this] { vout_thread_main(); });
+  }
+}
+
+void Engine::stop_playback_threads() {
+  packet_queue_.flush();
+  frame_queue_.flush();
+
+  if (input_worker_.joinable()) input_worker_.join();
+  if (decoder_worker_.joinable()) decoder_worker_.join();
+  if (vout_worker_.joinable()) vout_worker_.join();
+}
+
+void Engine::input_thread_main() {
+  auto source = pipeline_->source();
+  if (!source) return;
+
+  while (state_.load() != PlayerState::Stopped && state_.load() != PlayerState::Idle) {
+    if (state_.load() == PlayerState::Paused) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
+      continue;
+    }
+
+    // Very simple VLC-like demux loop. Limit queue size to avoid OOM.
+    if (packet_queue_.size() > 100) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      continue;
+    }
+
+    MediaPacket pkt{};
+    if (source->read_packet(pkt)) {
+      packet_queue_.push(std::move(pkt));
+    } else {
+      // EOF or error
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+  }
+}
+
+void Engine::decoder_thread_main() {
+  auto decoder = pipeline_->video_decoder();
+  if (!decoder) return;
+
+  while (state_.load() != PlayerState::Stopped && state_.load() != PlayerState::Idle) {
+    auto opt_pkt = packet_queue_.pop();
+    if (!opt_pkt) break; // flushed
+
+    MediaPacket pkt = std::move(*opt_pkt);
+    if (pkt.is_video) {
+      if (decoder->send_packet(pkt)) {
+        MediaFrame frame{};
+        while (decoder->receive_frame(frame)) {
+          frame_queue_.push(std::move(frame));
+          frame = {};
+        }
+      }
+    }
+    
+    // Packet is consumed, we should free its opaque data (if backend didn't take ownership).
+    // VLC handles this inside the decoder or drops it. We'll rely on pipeline->source to free it.
+    if (pipeline_->source()) {
+       pipeline_->source()->free_packet(pkt);
+    }
+  }
+}
+
+void Engine::vout_thread_main() {
+  auto vout = pipeline_->video_output();
+  if (!vout) return;
+
+  while (state_.load() != PlayerState::Stopped && state_.load() != PlayerState::Idle) {
+    if (state_.load() == PlayerState::Paused) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
+      continue;
+    }
+
+    auto opt_frame = frame_queue_.pop();
+    if (!opt_frame) break;
+
+    MediaFrame frame = std::move(*opt_frame);
+    
+    // VLC logic: check PTS against master clock. 
+    // Since we don't have an audio clock yet, we'll just present immediately.
+    vout->render_frame(frame);
+
+    if (pipeline_->video_decoder()) {
+       pipeline_->video_decoder()->free_frame(frame);
+    }
   }
 }
 

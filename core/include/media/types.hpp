@@ -36,6 +36,8 @@ struct MediaPacket {
 
 struct MediaFrame {
   void* opaque{nullptr}; // Backend-specific frame (e.g. AVFrame)
+  uint8_t* data{nullptr}; // Pointer to RGBA pixel data
+  int pitch{0};           // Row stride in bytes
   double pts_seconds{0.0};
   int width{0};
   int height{0};
