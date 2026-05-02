@@ -7,6 +7,8 @@
 
 #include "media/player.hpp"
 #include "media/win/d3d11_presenter.hpp"
+#include "media/modules/ffmpeg/ffmpeg_backend.hpp"
+#include "../../modules/audio/src/miniaudio_output.hpp"
 
 #include <shellapi.h>
 
@@ -43,7 +45,8 @@ std::string utf8_from_wide(std::wstring_view wide) {
 
 struct AppState {
   media::Player player{};
-  media::win::D3d11Presenter presenter{};
+  std::shared_ptr<media::win::D3d11Presenter> presenter{std::make_shared<media::win::D3d11Presenter>()};
+  std::shared_ptr<media::audio::MiniaudioOutput> audio_out{std::make_shared<media::audio::MiniaudioOutput>()};
 };
 
 AppState* app_from_hwnd(HWND hwnd) { return reinterpret_cast<AppState*>(GetWindowLongPtr(hwnd, GWLP_USERDATA)); }
@@ -55,7 +58,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
     auto* app = reinterpret_cast<AppState*>(create->lpCreateParams);
     SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(app));
 
-    if (!app->presenter.initialize(hwnd)) {
+    if (!app->presenter->initialize(hwnd)) {
       return -1;
     }
 
@@ -76,7 +79,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
   }
   case WM_DESTROY: {
     if (auto* app = app_from_hwnd(hwnd)) {
-      app->presenter.shutdown();
+      app->presenter->shutdown();
     }
     PostQuitMessage(0);
     return 0;
@@ -85,7 +88,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
     if (auto* app = app_from_hwnd(hwnd)) {
       UINT w = LOWORD(lparam);
       UINT h = HIWORD(lparam);
-      app->presenter.resize(w, h);
+      app->presenter->resize(w, h);
     }
     return 0;
   }
@@ -114,6 +117,14 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 
 int WINAPI wWinMain(_In_ HINSTANCE hinst, _In_opt_ HINSTANCE, _In_ LPWSTR, _In_ int show) {
   auto app = std::make_unique<AppState>();
+
+  auto pipeline = std::make_shared<media::MediaPipeline>();
+  pipeline->set_packet_source(media::ffmpeg::create_ffmpeg_demuxer());
+  pipeline->set_video_decoder(media::ffmpeg::create_ffmpeg_decoder());
+  pipeline->set_audio_decoder(media::ffmpeg::create_ffmpeg_decoder());
+  pipeline->set_video_output(app->presenter);
+  pipeline->set_audio_output(app->audio_out);
+  app->player.set_pipeline(pipeline);
 
   int argc = 0;
   LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
@@ -154,8 +165,8 @@ int WINAPI wWinMain(_In_ HINSTANCE hinst, _In_opt_ HINSTANCE, _In_ LPWSTR, _In_ 
   for (;;) {
     BOOL has_msg = PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE);
     if (!has_msg) {
-      if (app->presenter.ready()) {
-        app->presenter.present_clear(0.05f, 0.06f, 0.08f, 1.0f);
+      if (app->presenter->ready()) {
+        app->presenter->present_clear(0.05f, 0.06f, 0.08f, 1.0f);
       }
       Sleep(1);
       continue;
@@ -169,6 +180,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hinst, _In_opt_ HINSTANCE, _In_ LPWSTR, _In_ 
     DispatchMessageW(&msg);
   }
 
-  app->presenter.shutdown();
+  app->presenter->shutdown();
+  app->audio_out->shutdown();
   return static_cast<int>(msg.wParam);
 }

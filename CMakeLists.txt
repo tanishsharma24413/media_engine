@@ -11,6 +11,7 @@ option(MEDIA_ENABLE_FFMPEG "Build FFmpeg-backed demux/decode module" ON)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 add_subdirectory(core)
+add_subdirectory(modules/audio)
 
 if(WIN32)
   add_subdirectory(modules/win)

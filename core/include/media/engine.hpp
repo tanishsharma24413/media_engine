@@ -70,13 +70,16 @@ private:
   std::thread input_worker_{};
   std::thread decoder_worker_{};
   std::thread vout_worker_{};
+  std::thread aout_worker_{};
 
   ThreadQueue<MediaPacket> packet_queue_;
   ThreadQueue<MediaFrame> frame_queue_;
+  ThreadQueue<MediaFrame> audio_queue_;
 
   void input_thread_main();
   void decoder_thread_main();
   void vout_thread_main();
+  void aout_thread_main();
   
   void start_playback_threads();
   void stop_playback_threads();

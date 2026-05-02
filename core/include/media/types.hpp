@@ -36,11 +36,18 @@ struct MediaPacket {
 
 struct MediaFrame {
   void* opaque{nullptr}; // Backend-specific frame (e.g. AVFrame)
-  uint8_t* data{nullptr}; // Pointer to RGBA pixel data
-  int pitch{0};           // Row stride in bytes
+  uint8_t* data{nullptr}; // Pointer to pixel/audio data
+  int pitch{0};           // Row stride in bytes, or total bytes for audio
   double pts_seconds{0.0};
+  
+  bool is_video{false};
   int width{0};
   int height{0};
+
+  bool is_audio{false};
+  int sample_rate{0};
+  int channels{0};
+  int num_samples{0};
 };
 
 } // namespace media

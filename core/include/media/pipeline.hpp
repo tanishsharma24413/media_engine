@@ -34,6 +34,8 @@ struct IDecoder {
 
 struct IAudioOutput {
   virtual ~IAudioOutput() = default;
+  virtual bool open(int sample_rate, int channels) = 0;
+  virtual void write_audio(MediaFrame const& frame) = 0;
 };
 
 struct IVideoOutput {
@@ -52,8 +54,15 @@ public:
 
   void set_packet_source(std::shared_ptr<IPacketSource> source);
   void set_video_decoder(std::shared_ptr<IDecoder> decoder);
+  void set_audio_decoder(std::shared_ptr<IDecoder> decoder);
   void set_audio_output(std::shared_ptr<IAudioOutput> audio);
   void set_video_output(std::shared_ptr<IVideoOutput> video);
+
+  std::shared_ptr<IPacketSource> source() const { return source_; }
+  std::shared_ptr<IDecoder> video_decoder() const { return video_decoder_; }
+  std::shared_ptr<IDecoder> audio_decoder() const { return audio_decoder_; }
+  std::shared_ptr<IAudioOutput> audio_output() const { return audio_; }
+  std::shared_ptr<IVideoOutput> video_output() const { return video_; }
 
   MediaUri uri() const;
 
@@ -62,8 +71,10 @@ private:
   MediaUri uri_{};
   std::shared_ptr<IPacketSource> source_{};
   std::shared_ptr<IDecoder> video_decoder_{};
+  std::shared_ptr<IDecoder> audio_decoder_{};
   std::shared_ptr<IAudioOutput> audio_{};
   std::shared_ptr<IVideoOutput> video_{};
 };
+
 
 } // namespace media

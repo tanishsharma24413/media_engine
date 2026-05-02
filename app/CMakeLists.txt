@@ -7,6 +7,7 @@ target_link_libraries(
   PRIVATE
     media_core
     media_win
+    media_audio
     user32
     gdi32
     shell32

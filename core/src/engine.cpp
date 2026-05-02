@@ -101,6 +101,12 @@ void Engine::thread_main() {
           if (pipeline_->video_decoder()) {
               pipeline_->video_decoder()->open(pipeline_->source()->video_info());
           }
+          if (pipeline_->audio_decoder()) {
+              pipeline_->audio_decoder()->open(pipeline_->source()->audio_info());
+          }
+          if (pipeline_->audio_output()) {
+              pipeline_->audio_output()->open(44100, 2);
+          }
       }
 
       emit_state(PlayerState::Paused);
@@ -181,15 +187,20 @@ void Engine::start_playback_threads() {
   if (pipeline_->video_output()) {
     vout_worker_ = std::thread([this] { vout_thread_main(); });
   }
+  if (pipeline_->audio_output()) {
+    aout_worker_ = std::thread([this] { aout_thread_main(); });
+  }
 }
 
 void Engine::stop_playback_threads() {
   packet_queue_.flush();
   frame_queue_.flush();
+  audio_queue_.flush();
 
   if (input_worker_.joinable()) input_worker_.join();
   if (decoder_worker_.joinable()) decoder_worker_.join();
   if (vout_worker_.joinable()) vout_worker_.join();
+  if (aout_worker_.joinable()) aout_worker_.join();
 }
 
 void Engine::input_thread_main() {
@@ -219,19 +230,28 @@ void Engine::input_thread_main() {
 }
 
 void Engine::decoder_thread_main() {
-  auto decoder = pipeline_->video_decoder();
-  if (!decoder) return;
+  auto v_decoder = pipeline_->video_decoder();
+  auto a_decoder = pipeline_->audio_decoder();
+  if (!v_decoder && !a_decoder) return;
 
   while (state_.load() != PlayerState::Stopped && state_.load() != PlayerState::Idle) {
     auto opt_pkt = packet_queue_.pop();
     if (!opt_pkt) break; // flushed
 
     MediaPacket pkt = std::move(*opt_pkt);
-    if (pkt.is_video) {
-      if (decoder->send_packet(pkt)) {
+    if (pkt.is_video && v_decoder) {
+      if (v_decoder->send_packet(pkt)) {
         MediaFrame frame{};
-        while (decoder->receive_frame(frame)) {
+        while (v_decoder->receive_frame(frame)) {
           frame_queue_.push(std::move(frame));
+          frame = {};
+        }
+      }
+    } else if (pkt.is_audio && a_decoder) {
+      if (a_decoder->send_packet(pkt)) {
+        MediaFrame frame{};
+        while (a_decoder->receive_frame(frame)) {
+          audio_queue_.push(std::move(frame));
           frame = {};
         }
       }
@@ -281,6 +301,29 @@ void Engine::vout_thread_main() {
 
     if (pipeline_->video_decoder()) {
        pipeline_->video_decoder()->free_frame(frame);
+    }
+  }
+}
+
+void Engine::aout_thread_main() {
+  auto aout = pipeline_->audio_output();
+  if (!aout) return;
+
+  while (state_.load() != PlayerState::Stopped && state_.load() != PlayerState::Idle) {
+    if (state_.load() == PlayerState::Paused) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
+      continue;
+    }
+
+    auto opt_frame = audio_queue_.pop();
+    if (!opt_frame) break;
+
+    MediaFrame frame = std::move(*opt_frame);
+    
+    aout->write_audio(frame); // This blocks based on audio hardware playback rate
+
+    if (pipeline_->audio_decoder()) {
+       pipeline_->audio_decoder()->free_frame(frame);
     }
   }
 }
