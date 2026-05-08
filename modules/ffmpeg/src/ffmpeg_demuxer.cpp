@@ -87,4 +87,11 @@ StreamInfo FFmpegDemuxer::audio_info() const {
   return {};
 }
 
+double FFmpegDemuxer::duration_seconds() const {
+  if (format_ctx_ && format_ctx_->duration != AV_NOPTS_VALUE) {
+    return static_cast<double>(format_ctx_->duration) / AV_TIME_BASE;
+  }
+  return 0.0;
+}
+
 } // namespace media::ffmpeg

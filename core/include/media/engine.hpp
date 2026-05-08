@@ -35,6 +35,13 @@ public:
 
   PlayerState state() const;
 
+  // Returns elapsed media time in seconds.
+  double position_seconds() const;
+  // Returns total media duration in seconds (0 if unknown).
+  double duration_seconds() const;
+  // Forwards gain [0,1] to the audio output in the active pipeline.
+  void set_volume(float gain);
+
 private:
   void thread_main();
   void emit_state(PlayerState s);

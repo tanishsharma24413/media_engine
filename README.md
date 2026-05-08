@@ -1,38 +1,128 @@
-# libtanish (desktop prototype)
+# Tanish Player — libtanish Media Engine
 
-This is a **Windows-first scaffold** for a proprietary media core:
+A cross-platform, hardware-accelerated media player built on the **libtanish** engine.
 
-- `core/`: `media::Player` API + engine thread + pipeline placeholders + clock stub
-- `modules/win/`: minimal **D3D11** presenter (`IVideoOutput`)
-- `app/`: **Win32** shell (no Qt) with a simple render loop
+Supports: **Windows 10/11** · **Linux x86_64 / ARM64** · **Raspberry Pi 4/5**
 
-FFmpeg is optional and isolated under `modules/ffmpeg/` (off by default).
+---
 
-## Build (Windows, MSVC)
+## Quick-start
 
-```powershell
-cmake -S . -B build -G "Visual Studio 17 2022" -A x64
-cmake --build build --config Release
-```
-
-Run:
+### Windows (MSVC + vcpkg)
 
 ```powershell
-.\build\app\Release\media_player.exe "C:\path\to\file.mp4"
+# 1. Install dependencies
+vcpkg install sdl2:x64-windows sdl2-ttf:x64-windows
+
+# 2. Configure
+cmake -B build -S . `
+  -G "Visual Studio 17 2022" -A x64 `
+  -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" `
+  -DMEDIA_ENABLE_FFMPEG=ON `
+  -DFFMPEG_ROOT="C:/path/to/ffmpeg"
+
+# 3. Build
+cmake --build build --config Release --target TanishPlayer
+
+# 4. Run
+.\build\app\Release\TanishPlayer.exe
+# Or pass a file on the command line:
+.\build\app\Release\TanishPlayer.exe "C:\Videos\movie.mp4"
 ```
 
-Notes:
+> **FFmpeg note:** `FFMPEG_ROOT` must contain `include/` and `lib/` with
+> `avformat`, `avcodec`, `avutil`, `swscale`, `swresample`.
+> Pre-built Windows binaries: <https://github.com/BtbN/FFmpeg-Builds/releases>
 
-- The window clears a dark color at ~1000 FPS (with `Sleep(1)`), enough to validate D3D11 presentation. Replace with a paced vsync loop when decoding is wired in.
-- `Space` toggles `play`/`pause`, `Esc` calls `stop` (state machine only; no decode yet).
+---
 
-## Optional FFmpeg module
+### Linux (Debian / Ubuntu)
 
-```powershell
-cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DMEDIA_ENABLE_FFMPEG=ON -DFFMPEG_ROOT="C:/path/to/ffmpeg/prefix"
-cmake --build build --config Release
+```bash
+# 1. Install dependencies
+sudo apt install \
+  libsdl2-dev libsdl2-ttf-dev \
+  libavformat-dev libavcodec-dev \
+  libavutil-dev libswscale-dev libswresample-dev
+
+# 2. Configure + build
+cmake -B build -S . -DMEDIA_ENABLE_FFMPEG=ON
+cmake --build build --target TanishPlayer
+
+# 3. Run
+./build/app/TanishPlayer
+./build/app/TanishPlayer /path/to/video.mp4
 ```
 
-`FFMPEG_ROOT` must contain `include/` and `lib/` with `avformat`, `avcodec`, `avutil`, `swscale`, `swresample`.
+---
 
-Licensing note: how you link FFmpeg matters (LGPL vs GPL features). Decide early with legal counsel.
+### Raspberry Pi 4/5 — native build
+
+```bash
+# Same as Linux above (Raspberry Pi OS is Debian-based).
+sudo apt install \
+  libsdl2-dev libsdl2-ttf-dev \
+  libavformat-dev libavcodec-dev \
+  libavutil-dev libswscale-dev libswresample-dev
+
+cmake -B build -S . -DMEDIA_ENABLE_FFMPEG=ON
+cmake --build build --target TanishPlayer -j$(nproc)
+./build/app/TanishPlayer
+```
+
+### Raspberry Pi — cross-compile from x64 Linux
+
+```bash
+sudo apt install \
+  gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
+  libsdl2-dev:arm64 libavformat-dev:arm64 \
+  libavcodec-dev:arm64 libavutil-dev:arm64 \
+  libswscale-dev:arm64 libswresample-dev:arm64
+
+cmake -B build-rpi -S . \
+  -DCMAKE_TOOLCHAIN_FILE=cmake/rpi-aarch64.cmake \
+  -DMEDIA_ENABLE_FFMPEG=ON
+cmake --build build-rpi --target TanishPlayer -j$(nproc)
+```
+
+---
+
+## Controls
+
+| Key / Action | Effect |
+|---|---|
+| `Space` | Play / Pause |
+| `Escape` | Stop |
+| `F` or `F11` | Toggle fullscreen |
+| `Ctrl+O` | Open file dialog |
+| Click **Open File** | Open file dialog |
+| Drag & drop file | Open immediately |
+| Drag volume slider | Adjust audio gain |
+
+---
+
+## Architecture
+
+```
+libtanish/
+├── core/               media::Player · Engine · Pipeline · Clock
+├── modules/
+│   ├── ffmpeg/         IPacketSource + IDecoder via libavformat/avcodec
+│   ├── audio/          IAudioOutput via miniaudio (WASAPI/ALSA/PulseAudio)
+│   ├── sdl/            IVideoOutput + SdlWindow via SDL2 (all platforms)
+│   └── win/            D3D11Presenter — optional high-perf path (Windows only)
+├── app/                TanishPlayer — SDL2 UI (single source, all platforms)
+└── cmake/
+    ├── MediaFFmpeg.cmake
+    ├── FindSDL2.cmake
+    └── rpi-aarch64.cmake
+```
+
+## Licensing
+
+FFmpeg is linked under LGPL v2.1+. See `LICENSE` and FFmpeg's own license
+documentation. Decide early whether you need GPL features.
+
+SDL2 is licensed under the zlib license.
+
+miniaudio is dual-licensed under MIT-0 / Public Domain.

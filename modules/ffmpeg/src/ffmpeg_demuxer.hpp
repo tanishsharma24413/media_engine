@@ -18,6 +18,7 @@ public:
 
   StreamInfo video_info() const override;
   StreamInfo audio_info() const override;
+  double duration_seconds() const override;
 
 private:
   AVFormatContext* format_ctx_{nullptr};

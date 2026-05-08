@@ -19,9 +19,12 @@ struct IPacketSource {
   virtual bool open(MediaUri const& uri) = 0;
   virtual bool read_packet(MediaPacket& pkt) = 0;
   virtual void free_packet(MediaPacket& pkt) = 0;
-  
+
   virtual StreamInfo video_info() const = 0;
   virtual StreamInfo audio_info() const = 0;
+
+  // Returns total duration in seconds; 0 if unknown or not yet opened.
+  virtual double duration_seconds() const { return 0.0; }
 };
 
 struct IDecoder {
@@ -36,6 +39,8 @@ struct IAudioOutput {
   virtual ~IAudioOutput() = default;
   virtual bool open(int sample_rate, int channels) = 0;
   virtual void write_audio(MediaFrame const& frame) = 0;
+  // Sets playback gain [0.0, 1.0]. Default no-op.
+  virtual void set_volume(float /*gain*/) {}
 };
 
 struct IVideoOutput {

@@ -1,0 +1,37 @@
+// tanish_player.rc — Windows resource script
+// Embeds the application icon and version metadata.
+
+#include <winresrc.h>
+
+// ── Application icon ──────────────────────────────────────────────────────────
+// IDI_APPLICATION ICON "tanish.ico"
+
+// ── Version information ───────────────────────────────────────────────────────
+VS_VERSION_INFO VERSIONINFO
+  FILEVERSION     1,0,0,0
+  PRODUCTVERSION  1,0,0,0
+  FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
+  FILEFLAGS       0
+  FILEOS          VOS__WINDOWS32
+  FILETYPE        VFT_APP
+  FILESUBTYPE     VFT2_UNKNOWN
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904B0"   // Language: English (US), Codepage: Unicode
+    BEGIN
+      VALUE "CompanyName",      "Tanish Sharma\0"
+      VALUE "FileDescription",  "Tanish Player\0"
+      VALUE "FileVersion",      "1.0.0.0\0"
+      VALUE "InternalName",     "TanishPlayer\0"
+      VALUE "LegalCopyright",   "Copyright (C) 2026 Tanish Sharma\0"
+      VALUE "OriginalFilename", "TanishPlayer.exe\0"
+      VALUE "ProductName",      "Tanish Player\0"
+      VALUE "ProductVersion",   "1.0.0.0\0"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x0409, 1200
+  END
+END

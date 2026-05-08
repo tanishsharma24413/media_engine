@@ -45,4 +45,21 @@ void tanish_player_stop(tanish_player_t* player) {
     }
 }
 
+double tanish_player_get_position(tanish_player_t* player) {
+    if (player && player->internal_player)
+        return player->internal_player->position_seconds();
+    return 0.0;
+}
+
+double tanish_player_get_duration(tanish_player_t* player) {
+    if (player && player->internal_player)
+        return player->internal_player->duration_seconds();
+    return 0.0;
+}
+
+void tanish_player_set_volume(tanish_player_t* player, float volume) {
+    if (player && player->internal_player)
+        player->internal_player->set_volume(volume);
+}
+
 } // extern "C"

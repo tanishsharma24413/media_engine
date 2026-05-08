@@ -76,6 +76,25 @@ void Engine::post_shutdown() {
 
 PlayerState Engine::state() const { return state_.load(); }
 
+double Engine::position_seconds() const {
+  return clock_.elapsed().count();
+}
+
+double Engine::duration_seconds() const {
+  if (pipeline_) {
+    auto src = pipeline_->source();
+    if (src) return src->duration_seconds();
+  }
+  return 0.0;
+}
+
+void Engine::set_volume(float gain) {
+  if (pipeline_) {
+    auto aout = pipeline_->audio_output();
+    if (aout) aout->set_volume(gain);
+  }
+}
+
 void Engine::thread_main() {
   while (true) {
     Command cmd{};

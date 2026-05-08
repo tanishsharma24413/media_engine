@@ -37,6 +37,11 @@ public:
 
   PlayerState state() const;
 
+  // Playback info (safe to call from any thread).
+  double position_seconds() const;
+  double duration_seconds() const;
+  void   set_volume(float gain);  // gain in [0.0, 1.0]
+
   // Advanced: replace default pipeline (e.g. inject test doubles). Not required for apps.
   void set_pipeline(std::shared_ptr<MediaPipeline> pipeline);
 

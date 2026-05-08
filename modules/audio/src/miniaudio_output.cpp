@@ -79,6 +79,12 @@ void MiniaudioOutput::write_audio(MediaFrame const& frame) {
   }
 }
 
+void MiniaudioOutput::set_volume(float gain) {
+  if (device_) {
+    ma_device_set_master_volume(device_, gain);
+  }
+}
+
 void MiniaudioOutput::data_callback(ma_device* pDevice, void* pOutput, const void* /*pInput*/, std::uint32_t frameCount) {
   MiniaudioOutput* self = static_cast<MiniaudioOutput*>(pDevice->pUserData);
   if (!self->rb_) return;

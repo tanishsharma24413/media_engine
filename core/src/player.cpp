@@ -35,6 +35,10 @@ void Player::stop() { impl_->engine.post_stop(); }
 
 PlayerState Player::state() const { return impl_->engine.state(); }
 
+double Player::position_seconds() const { return impl_->engine.position_seconds(); }
+double Player::duration_seconds() const { return impl_->engine.duration_seconds(); }
+void   Player::set_volume(float gain)   { impl_->engine.set_volume(gain); }
+
 void Player::set_pipeline(std::shared_ptr<MediaPipeline> pipeline) {
   impl_->engine.set_pipeline(std::move(pipeline));
 }
