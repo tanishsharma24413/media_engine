@@ -25,12 +25,12 @@ function(media_apply_ffmpeg target_name)
       )
     endif()
 
-    target_include_directories(${target_name} PRIVATE "${_root}/include")
-    target_link_directories(${target_name} PRIVATE "${_root}/lib")
+    target_include_directories(${target_name} PUBLIC "${_root}/include")
+    target_link_directories(${target_name} PUBLIC "${_root}/lib")
 
     target_link_libraries(
       ${target_name}
-      PRIVATE
+      PUBLIC
         avformat
         avcodec
         avutil
@@ -46,5 +46,5 @@ function(media_apply_ffmpeg target_name)
     target_link_libraries(${target_name} PRIVATE ${FFMPEG_LIBRARIES})
   endif()
 
-  target_compile_definitions(${target_name} PRIVATE MEDIA_WITH_FFMPEG=1)
+  target_compile_definitions(${target_name} PUBLIC MEDIA_WITH_FFMPEG=1)
 endfunction()

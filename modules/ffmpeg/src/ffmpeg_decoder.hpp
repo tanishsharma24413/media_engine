@@ -3,6 +3,8 @@
 #include "media/pipeline.hpp"
 
 struct AVCodecContext;
+struct SwsContext;
+struct SwrContext;
 
 namespace media::ffmpeg {
 
@@ -18,8 +20,8 @@ public:
 
 private:
   AVCodecContext* codec_ctx_{nullptr};
-  struct SwsContext* sws_ctx_{nullptr};
-  struct SwrContext* swr_ctx_{nullptr};
+  SwsContext* sws_ctx_{nullptr};
+  SwrContext* swr_ctx_{nullptr};
   double time_base_{0.0};
   bool is_audio_{false};
 };

@@ -7,6 +7,9 @@
 
 if(WIN32)
   # vcpkg or manually installed SDL2 config package
+  if(NOT SDL2_DIR AND EXISTS "C:/SDL2/cmake")
+    set(SDL2_DIR "C:/SDL2/cmake")
+  endif()
   find_package(SDL2 CONFIG REQUIRED)
   # vcpkg provides SDL2::SDL2 and SDL2::SDL2main already.
 else()

@@ -2,8 +2,7 @@
 
 #include "media/pipeline.hpp"
 
-struct ma_device;
-struct ma_pcm_rb;
+#include "miniaudio.h"
 
 namespace media::audio {
 
